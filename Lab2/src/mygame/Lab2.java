@@ -11,19 +11,27 @@ import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.AnalogListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.jme3.input.controls.MouseButtonTrigger;
+import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
+import com.jme3.light.PointLight;
 import com.jme3.material.Material;
+import com.jme3.material.RenderState.BlendMode;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Ray;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
+import com.jme3.post.FilterPostProcessor;
+import com.jme3.post.filters.BloomFilter;
+import com.jme3.renderer.queue.RenderQueue.Bucket;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.scene.shape.Sphere;
+import com.jme3.util.TangentBinormalGenerator;
 import java.util.List;
 
 
@@ -36,7 +44,7 @@ public class Lab2 extends SimpleApplication {
     //Integer constants
     public static final int PLAYINGFIELD_RESOLUTION = 100;
     public static final int CAN_RESOLUTION = 100;
-    public static final int CANNONBAL_NUM = 5;
+    public static final int CANNONBALL_NUM = 5;
     public static final int CANNONBALL_RESOLUTION = 100;
     public static final int LARGECAN_NUM = 10;
     public static final int LARGECAN_VALUE = 10;
@@ -72,7 +80,9 @@ public class Lab2 extends SimpleApplication {
     public static final float CANNON_BASE_HEIGHT = 3f * CANNON_BARREL_RADIUS;
     public static final float CANNON_ROTATION_SPEED = 20f;
     
-    public static final float PLAYINGFIELD_HEIGHT = 0.1f;
+    public static final float PLAYINGFIELD_HEIGHT = 2.3f * CANNON_BARREL_RADIUS;
+    public static final float LASER_SIDE = 0.3f;
+    public static final float LASER_LENGTH = PLAYINGFIELD_RADIUS *2f;
 
     public static void main(String[] args){
         Lab2 app = new Lab2();
@@ -80,74 +90,128 @@ public class Lab2 extends SimpleApplication {
     }
 
     //Variables that are useful to reach from anywhere.
-
     protected Node playingFieldNode;
-    protected Node basePlateNode;
-    protected Node supportNode;
+    protected Node baseNode;
+    protected Node supportPlateNode;
     protected Node cannonNode;
     protected Node laserNode;
+    protected Node allProjectiles;
+    protected Node allCans;
     protected AudioNode cannonAudioNode;
-    
-    //protected int reverse = 1;
-    //protected int opposite = 1;
-    //protected boolean toggle = false; //If whole system spins
-    //protected boolean cylinderVisible = true;
-    //protected float localscale = 1; //Used for keeping scale
+    protected boolean laser_on = false;
+    protected int active_cannonballs = 0;
 
     private void initNodeTree(){
         
         playingFieldNode = new Node("playingFieldNode");
         rootNode.attachChild(playingFieldNode);
         
-        basePlateNode = new Node("basePlateNode");
-        playingFieldNode.attachChild(basePlateNode);
+        baseNode = new Node("basePlateNode");
+        playingFieldNode.attachChild(baseNode);
         
-        supportNode = new Node("supportNode");
-        basePlateNode.attachChild(supportNode);
+        supportPlateNode = new Node("supportNode");
+        baseNode.attachChild(supportPlateNode);
         
         cannonNode = new Node("cannonNode");
-        supportNode.attachChild(cannonNode);
+        supportPlateNode.attachChild(cannonNode);
         
         laserNode = new Node("laserNode");
         cannonNode.attachChild(laserNode);
         
-        playingFieldNode.setLocalTranslation(0f, -50f, -150f);
-        playingFieldNode.rotate(90*FastMath.DEG_TO_RAD,0,0);
+        allProjectiles = new Node("allProjectiles");
+        playingFieldNode.attachChild(allProjectiles);
+        
+        allCans = new Node("allCans");
+        playingFieldNode.attachChild(allCans);
+        
+        playingFieldNode.setLocalTranslation(0f, -150f, -350f);
+        baseNode.setLocalTranslation(0f, 0, PLAYINGFIELD_RADIUS);
+        supportPlateNode.setLocalTranslation(0,CANNON_BASE_HEIGHT*0.5f,0);
+        cannonNode.setLocalTranslation(0,CANNON_BARREL_RADIUS,
+                  CANNON_BARREL_LENGTH*-0.5f);
+        laserNode.setLocalTranslation(0,-CANNON_BARREL_RADIUS-LASER_SIDE,
+                  -LASER_LENGTH);
+        
+        allProjectiles.setLocalTranslation(0,
+                CANNON_BASE_HEIGHT*0.5f+CANNON_BARREL_RADIUS,
+                PLAYINGFIELD_RADIUS);//Cannonballs originate within the cannon.
+
     }
 
     private void initShapes() {
         
+        //PLaying field. Flat green.
         Cylinder playingFieldCyl = new Cylinder(PLAYINGFIELD_RESOLUTION,
                 PLAYINGFIELD_RESOLUTION,PLAYINGFIELD_RADIUS,PLAYINGFIELD_HEIGHT,
                 true);
         Geometry playingField = new Geometry("Playing Field", playingFieldCyl);
         Material grass = new Material(assetManager,
-                "Common/MatDefs/Misc/Unshaded.j3md");
-        grass.setTexture("ColorMap",
-                assetManager.loadTexture("Textures/Terrain/splat/grass.jpg"));
-        playingFieldCyl.scaleTextureCoordinates(new Vector2f(60f,60f));
+                "Common/MatDefs/Light/Lighting.j3md");
+        grass.setBoolean("UseMaterialColors",true);
+        grass.setColor("Ambient", new ColorRGBA(0,0.5f,0,0)); 
+        grass.setColor("Diffuse", new ColorRGBA(0,0.5f,0,0));
+        //Somewhat less eye-searing green.
         playingField.setMaterial(grass);
+        playingField.rotate(90*FastMath.DEG_TO_RAD,0,0);
         playingFieldNode.attachChild(playingField);
         
-        DirectionalLight sun = new DirectionalLight();
-        sun.setDirection(new Vector3f(1,20, -50));
-        sun.setColor(ColorRGBA.White);
-        rootNode.addLight(sun);
+        //The base.
+        Cylinder baseCyl = new Cylinder(CANNONBALL_RESOLUTION,
+                CANNONBALL_RESOLUTION,CANNON_BASE_RADIUS,CANNON_BASE_HEIGHT, 
+                true);
+        Geometry base = new Geometry("Base", baseCyl);
+        Material black_metal = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        black_metal.setBoolean("UseMaterialColors",true);
+        black_metal.setColor("Ambient", ColorRGBA.Black); 
+        black_metal.setColor("Diffuse", ColorRGBA.Black); 
+        black_metal.setColor("Specular", ColorRGBA.White);
+        black_metal.setFloat("Shininess", 128f);
+        base.setMaterial(black_metal);
+        baseNode.attachChild(base);
+        base.rotate(90*FastMath.DEG_TO_RAD,0,0);
         
-        // create blue box
-        Box box = new Box(1f,9f,4f);
-        Geometry blue = new Geometry("Box", box);
-        Material mat1 = new Material(assetManager,
-                "Common/MatDefs/Misc/Unshaded.j3md");
-        mat1.setColor("Color", ColorRGBA.Blue);
-        blue.setMaterial(mat1);
+        //The Support
+        Cylinder supportPlateCyl = new Cylinder(CANNONBALL_RESOLUTION,
+                CANNONBALL_RESOLUTION,CANNON_SUPPORT_RADIUS,
+                CANNON_SUPPORT_HEIGHT, true);
+        Geometry supportPlate = new Geometry("Support Plate", supportPlateCyl);
+        Material wood = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        wood.setBoolean("UseMaterialColors",true);
+        wood.setColor("Ambient", ColorRGBA.Brown); 
+        wood.setColor("Diffuse", ColorRGBA.Brown); 
+        supportPlate.setMaterial(wood);
+        supportPlateNode.attachChild(supportPlate);
+        supportPlate.rotate(90*FastMath.DEG_TO_RAD,0,90*FastMath.DEG_TO_RAD);
         
-        Cylinder cyl = new Cylinder(32,32,2f,3f, true);
-        Geometry red = new Geometry("Cylinder", cyl);
-        Material mat2 = new Material(assetManager,
+        //Cannon barrel
+        Cylinder cannonCyl = new Cylinder(CANNONBALL_RESOLUTION,
+                CANNONBALL_RESOLUTION,CANNON_BARREL_RADIUS,
+                CANNON_BARREL_LENGTH, true);
+        Geometry cannon = new Geometry("Base", cannonCyl);
+        Material gunmetal = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        gunmetal.setBoolean("UseMaterialColors",true);
+        gunmetal.setColor("Ambient", ColorRGBA.Gray); 
+        gunmetal.setColor("Diffuse", ColorRGBA.Gray); 
+        gunmetal.setColor("Specular", ColorRGBA.White);
+        gunmetal.setFloat("Shininess", 64f);
+        cannon.setMaterial(gunmetal);
+        cannonNode.attachChild(cannon);
+        
+        //laser geometry. Now with glow!
+        Box laserBox = new Box(LASER_SIDE,LASER_SIDE,LASER_LENGTH);
+        Geometry laser = new Geometry("Laser", laserBox);
+        Material laser_red = new Material(assetManager,
                 "Common/MatDefs/Misc/Unshaded.j3md");
-        mat2.setColor("Color", ColorRGBA.Red);
-        red.setMaterial(mat2);
+        laser_red.setColor("Color", new ColorRGBA(1f,0f,0f,0f));
+        laser_red.getAdditionalRenderState().setBlendMode(BlendMode.Alpha);
+        laser.setMaterial(laser_red);
+        laser.setQueueBucket(Bucket.Transparent); 
+        
+        laserNode.attachChild(laser);
+        
 
         Sphere sphere = new Sphere(32,32,3f);
         Geometry yellow = new Geometry("Sphere", sphere);
@@ -160,37 +224,30 @@ public class Lab2 extends SimpleApplication {
     }
 
     private void initKeys() {
-        /*
+        
         //Immediate actions:
-        inputManager.addMapping("Reverse",  new KeyTrigger(KeyInput.KEY_R));
-        inputManager.addMapping("Toggle", new KeyTrigger(KeyInput.KEY_T));
-        inputManager.addMapping("Opposite", new KeyTrigger(KeyInput.KEY_O));
-
-        //while pressed
-        inputManager.addMapping("Backward",   new KeyTrigger(KeyInput.KEY_B));
-        inputManager.addMapping("Forward",  new KeyTrigger(KeyInput.KEY_F));
-        inputManager.addMapping("Shrink", new KeyTrigger(KeyInput.KEY_S));
-        inputManager.addMapping("Grow", new KeyTrigger(KeyInput.KEY_G));
-
-        //When released
-        inputManager.addMapping("Disappear", new KeyTrigger(KeyInput.KEY_D));
-
-        inputManager.addMapping("Shoot", new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
+        inputManager.addMapping("Toggle laser",  new KeyTrigger(KeyInput.KEY_L));
+        inputManager.addMapping("Shoot", new KeyTrigger(KeyInput.KEY_SPACE));
+        
+        inputManager.addMapping("Turn left",  new KeyTrigger(KeyInput.KEY_H));
+        inputManager.addMapping("Turn right",  new KeyTrigger(KeyInput.KEY_K));
+       
+        //inputManager.addMapping("Shoot", new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
 
         // Add the names to the action listener.
-        inputManager.addListener(actionListener, "Reverse","Toggle","Opposite", "Disappear","Shoot");
-        inputManager.addListener(analogListener,"Backward","Forward","Shrink","Grow");
-        */
+        inputManager.addListener(actionListener, "Toggle laser", "Shoot");
+        inputManager.addListener(analogListener,"Turn left", "Turn right");
   };
 
     private void initSound() {
-        /*
-        audio_gun = new AudioNode(assetManager, "Sound/Effects/Gun.wav", false);
-        audio_gun.setPositional(true);
-        audio_gun.setLooping(false);
-        audio_gun.setVolume(1);
-        soundNode.attachChild(audio_gun);
-        */
+        
+        cannonAudioNode = new AudioNode(assetManager, "Sound/Effects/Gun.wav", 
+                          false);
+        cannonAudioNode.setPositional(true);
+        cannonAudioNode.setLooping(false);
+        cannonAudioNode.setVolume(1);
+        supportPlateNode.attachChild(cannonAudioNode);
+        
     }
     
     protected void initCrossHairs() {
@@ -206,151 +263,113 @@ public class Lab2 extends SimpleApplication {
         */
     }
     
-    private Geometry makeSnowball(){
-        /*
-        Sphere ball = new Sphere(30, 30, 0.2f);
-        Geometry snowball = new Geometry("Snowball", ball);
-        Material snow = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        snow.setColor("Color", ColorRGBA.White);
-        snowball.setMaterial(snow);
-        return snowball;
-        */
-        return null;
+    protected void initLight() {
+        DirectionalLight sun = new DirectionalLight();
+        sun.setDirection(new Vector3f(0f,-100f, -1f));
+        sun.setColor(ColorRGBA.White);
+        rootNode.addLight(sun);
+        
+        AmbientLight al = new AmbientLight();
+        al.setColor(ColorRGBA.White.mult(0.2f));
+        rootNode.addLight(al);
+        
+        //This is for shininess of laser.
+        FilterPostProcessor fpp=new FilterPostProcessor(assetManager);
+        BloomFilter bloom = new BloomFilter(BloomFilter.GlowMode.Objects);
+        fpp.addFilter(bloom);
+        viewPort.addProcessor(fpp);
+    };
+    
+    private Node makeCannonball(){
+        
+        Sphere cannonballSphere = new Sphere(CANNONBALL_RESOLUTION, 
+                CANNONBALL_RESOLUTION, CANNONBALL_RADIUS);
+        Geometry cannonball = new Geometry("Cannonball", cannonballSphere);
+        Material dark_metal = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        dark_metal.setBoolean("UseMaterialColors",true);
+        dark_metal.setColor("Ambient", ColorRGBA.DarkGray); 
+        dark_metal.setColor("Diffuse", ColorRGBA.DarkGray); 
+        dark_metal.setColor("Specular", ColorRGBA.White);
+        dark_metal.setFloat("Shininess", 64f);
+        cannonball.setMaterial(dark_metal);
+        
+        Node cannonballNode = new Node();
+        cannonballNode.attachChild(cannonball);
+        allProjectiles.attachChild(cannonballNode);
+        return cannonballNode;
     }
     
     @Override
     public void simpleInitApp() {
         
         initNodeTree();
+        initLight();
         initShapes();
-        /*
+        
         initKeys();
         initSound();
-        initCrossHairs();
-        */
+        
+        flyCam.setMoveSpeed(60);
     };
 
 private ActionListener actionListener = new ActionListener() {
     public void onAction(String name, boolean keyPressed, float tpf) {
-        /*
-        if (name.equals("Reverse") && keyPressed) {
-            reverse = reverse *-1; //This will flip between 1 and -1 always.
-        }
-        if (name.equals("Opposite") && keyPressed) {
-            opposite = opposite *-1; //This will flip between 1 and -1 always.
-        }
-        if (name.equals("Toggle") && keyPressed) {
-            toggle = !toggle; //Toggles between on and off.
-        }
-        if (name.equals("Disappear") && !keyPressed) {
-            if (cylinderVisible){
-                cylinderVisible = false;
-                cylinderNode.removeFromParent();
-                audio_gun.playInstance();
+        if (name.equals("Toggle laser") && keyPressed) {
+            laser_on = !laser_on; //This will flip between off and on.
+            
+            //typecasting is not good, but Laser should only be
+            //a geometry. Spatials don't have materials, normally.
+            Geometry laser =(Geometry)laserNode.getChild("Laser"); 
+            Material laser_red = laser.getMaterial();
+            if (laser_on) {
+                laser_red.setColor("Color", new ColorRGBA(1f,0f,0f,0.5f));
+                laser_red.setColor("GlowColor", ColorRGBA.Red);
+            } else {
+                laser_red.setColor("Color", new ColorRGBA(0f,0f,0f,0f));
+                laser_red.setColor("GlowColor", ColorRGBA.Black);
             }
-            else {
-                cylinderVisible = true;
-                pivot.attachChild(cylinderNode);
-            }
+            laser.setMaterial(laser_red);
         }
-        if (name.equals("Shoot") && !keyPressed) {
-            // 1. Reset results list.
-            CollisionResults results = new CollisionResults();
-            // 2. Aim the ray from cam loc to cam direction.
-            Ray ray = new Ray(cam.getLocation(), cam.getDirection());
-            // 3. Collect intersections between Ray and Shootables in results list.
-            rootNode.collideWith(ray, results);
-            // 5. Use the results (we mark the hit object)
-            if (results.size() > 0) {
-                // The closest collision point is what was truly hit:
-                CollisionResult closest = results.getClosestCollision();
-                Node hitNode = closest.getGeometry().getParent();
-                Geometry newSnowball = makeSnowball();
-                Vector3f hitPoint = new Vector3f(0,0,0);
-                hitNode.worldToLocal(closest.getContactPoint(), hitPoint);
-                newSnowball.setLocalTranslation(hitPoint);
-                hitNode.attachChild(newSnowball);
+        if (name.equals("Shoot") && keyPressed) {
+            if (active_cannonballs < CANNONBALL_NUM) {
+                active_cannonballs++;
+                Node cannonball = makeCannonball();
+                Quaternion launchrotation = baseNode.getLocalRotation();
+                cannonball.rotate(launchrotation);
+                cannonAudioNode.playInstance();
             }
         }
-        */
     }
 };
 
 
-/*
 private AnalogListener analogListener = new AnalogListener() {
     
     //inputManager.addListener(analogListener,"Backward","Forward","Shrink","Grow");
     public void onAnalog(String name, float value, float tpf) {
-        if (name.equals("Backward")) {
-            if (toggle) {
-                center.rotate(0, 0, 1f*tpf);
-            } else {
-                boxNode.rotate(0, 0, 1f*tpf);
-            }
+        if (name.equals("Turn left")) {
+            baseNode.rotate(0,tpf*CANNON_ROTATION_SPEED*0.1f,0);
         }
-        if (name.equals("Forward")) {
-            if (toggle) {
-                center.rotate(0, 0, -1f*tpf);
-            } else {
-                boxNode.rotate(0, 0, -1f*tpf);
-            }
-        }
-        //Consider only scaling the sphere and then
-        //scale position of snowballs.
-        if (name.equals("Grow")) {
-            float scalefactor = (1f+tpf);
-            localscale += tpf;
-            //sphereNode.getChild("Sphere").setLocalScale(cpt);
-            sphereNode.getChild("Sphere").scale(scalefactor);
-            
-            List<Spatial> allChildren = sphereNode.getChildren();
-            
-            for(int i = 0; i < allChildren.size(); i++){    
-                Spatial child = allChildren.get(i);
-                
-                if (child.getName().equals("Snowball")){
-                    
-                    Vector3f distance = child.getLocalTranslation();
-                    Vector3f newDistance = new Vector3f(0,0,0);
-                    distance.mult(scalefactor, newDistance);
-                    child.setLocalTranslation(newDistance);
-                } 
-            }
-        }
-        if (name.equals("Shrink")) {
-            if (!(localscale <= 0.01f)){ //So that node does not invert
-                float scalefactor = (1f-tpf);
-                localscale -= tpf;
-                sphereNode.getChild("Sphere").scale(scalefactor);
-                //sphereNode.getChild("Sphere").setLocalScale(cpt);
-                List<Spatial> allChildren = sphereNode.getChildren();
-                
-                for(int i = 0; i < allChildren.size(); i++){
-                    Spatial child = allChildren.get(i);
-                    if (child.getName().equals("Snowball")){
-                    
-                        Vector3f distance = child.getLocalTranslation();
-                        Vector3f newDistance = new Vector3f(0,0,0);
-                        distance.mult(scalefactor, newDistance);
-                        child.setLocalTranslation(newDistance);
-                    } 
-                }
-            }
+        if (name.equals("Turn right")) {
+            baseNode.rotate(0,tpf*-CANNON_ROTATION_SPEED*0.1f,0);
         }
     }
     
 };
-*/
 
     @Override
     public void simpleUpdate(float tpf) {
-        /*
-        // make the player rotate:
-        center.rotate(0, 0.5f*tpf*reverse, 0);
-        pivot.rotate(0,0,2.5f*tpf*opposite);
         listener.setLocation(cam.getLocation());
         listener.setRotation(cam.getRotation());
-        */
+        
+        List<Spatial> cannonballs = allProjectiles.getChildren();
+        for (int i = 0; i < cannonballs.size(); i++) {
+            Spatial element = cannonballs.get(i);
+            if (element.getUserData("Name")) {
+                element.move(-CANNONBALL_SPEED*tpf, 0, 0);
+            }
+            // Remove it if distance is radius + safety distance.
+        }
     }
 }

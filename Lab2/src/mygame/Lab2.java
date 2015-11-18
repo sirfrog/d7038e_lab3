@@ -281,7 +281,6 @@ public class Lab2 extends SimpleApplication {
     };
     
     private Node makeCannonball(){
-        
         Sphere cannonballSphere = new Sphere(CANNONBALL_RESOLUTION, 
                 CANNONBALL_RESOLUTION, CANNONBALL_RADIUS);
         Geometry cannonball = new Geometry("Cannonball", cannonballSphere);
@@ -294,10 +293,72 @@ public class Lab2 extends SimpleApplication {
         dark_metal.setFloat("Shininess", 64f);
         cannonball.setMaterial(dark_metal);
         
-        Node cannonballNode = new Node();
+        Node cannonballNode = new Node("Cannonball Node");
         cannonballNode.attachChild(cannonball);
-        allProjectiles.attachChild(cannonballNode);
         return cannonballNode;
+    }
+    
+    private Node makeSmallCan(){
+        Cylinder smallCanCyl = new Cylinder(CAN_RESOLUTION,
+                CAN_RESOLUTION,SMALLCAN_RADIUS,SMALLCAN_HEIGHT,
+                true);
+        Geometry smallCan = new Geometry("Can", smallCanCyl);
+        Material blue_metal = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        blue_metal.setBoolean("UseMaterialColors",true);
+        blue_metal.setColor("Ambient", ColorRGBA.Blue); 
+        blue_metal.setColor("Diffuse", ColorRGBA.Blue);
+        blue_metal.setColor("Specular", ColorRGBA.White);
+        blue_metal.setFloat("Shininess", 64f);
+        smallCan.setMaterial(blue_metal);
+        smallCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
+        
+        Node smallCanNode = new Node("Cannonball Node");
+        smallCanNode.attachChild(smallCan);
+        allCans.attachChild(smallCanNode);
+        return smallCanNode;
+    }
+    
+    private Node makeMediumCan(){
+        Cylinder mediumCanCyl = new Cylinder(CAN_RESOLUTION,
+                CAN_RESOLUTION,MEDIUMCAN_RADIUS,MEDIUMCAN_HEIGHT,
+                true);
+        Geometry mediumCan = new Geometry("Can", mediumCanCyl);
+        Material purple_metal = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        purple_metal.setBoolean("UseMaterialColors",true);
+        purple_metal.setColor("Ambient", new ColorRGBA(0.5f,0,0.5f,1f)); 
+        purple_metal.setColor("Diffuse", new ColorRGBA(0.5f,0,0.5f,1f));
+        purple_metal.setColor("Specular", ColorRGBA.White);
+        purple_metal.setFloat("Shininess", 64f);
+        mediumCan.setMaterial(purple_metal);
+        mediumCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
+        
+        Node mediumCanNode = new Node("Cannonball Node");
+        mediumCanNode.attachChild(mediumCan);
+        allCans.attachChild(mediumCanNode);
+        return mediumCanNode;
+    }
+    
+    private Node makeLargeCan(){
+        Cylinder largeCanCyl = new Cylinder(CAN_RESOLUTION,
+                CAN_RESOLUTION,LARGECAN_RADIUS,LARGECAN_HEIGHT,
+                true);
+        Geometry largeCan = new Geometry("Can", largeCanCyl);
+        Material pink_metal = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        pink_metal.setBoolean("UseMaterialColors",true);
+        pink_metal.setColor("Ambient", ColorRGBA.Magenta); 
+        pink_metal.setColor("Diffuse", ColorRGBA.Magenta);
+        pink_metal.setColor("Specular", ColorRGBA.White);
+        pink_metal.setFloat("Shininess", 64f);
+        largeCan.setMaterial(pink_metal);
+        largeCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
+        
+        Node largeCanNode = new Node("Cannonball Node");
+        largeCanNode.attachChild(largeCan);
+        allCans.attachChild(largeCanNode);
+        return largeCanNode;
     }
     
     @Override
@@ -335,8 +396,11 @@ private ActionListener actionListener = new ActionListener() {
             if (active_cannonballs < CANNONBALL_NUM) {
                 active_cannonballs++;
                 Node cannonball = makeCannonball();
+                allProjectiles.attachChild(cannonball);
                 Quaternion launchrotation = baseNode.getLocalRotation();
                 cannonball.rotate(launchrotation);
+                Vector3f forward = baseNode.getLocalRotation().mult(Vector3f.UNIT_Z);
+                cannonball.setLocalTranslation(forward.mult(-CANNON_BARREL_LENGTH+CANNONBALL_RADIUS));
                 cannonAudioNode.playInstance();
             }
         }
@@ -355,7 +419,6 @@ private AnalogListener analogListener = new AnalogListener() {
             baseNode.rotate(0,tpf*-CANNON_ROTATION_SPEED*0.1f,0);
         }
     }
-    
 };
 
     @Override
@@ -366,10 +429,22 @@ private AnalogListener analogListener = new AnalogListener() {
         List<Spatial> cannonballs = allProjectiles.getChildren();
         for (int i = 0; i < cannonballs.size(); i++) {
             Spatial element = cannonballs.get(i);
-            if (element.getUserData("Name")) {
-                element.move(-CANNONBALL_SPEED*tpf, 0, 0);
+            //System.out.println(element.getName());
+            if (element.getName().equals("Cannonball Node")) {
+                //This piece of code wizardry moves it in the direction it's pointing
+                //Turns out it's a lot harder than you'd think.
+                Vector3f forward = element.getLocalRotation().mult(Vector3f.UNIT_Z);
+                element.move(forward.mult(-CANNONBALL_SPEED).mult(tpf));
             }
-            // Remove it if distance is radius + safety distance.
+            if (element.getWorldTranslation().distance(
+                    playingFieldNode.getWorldTranslation())
+                    >= PLAYINGFIELD_RADIUS+DEAD_MARGIN ) {
+                element.removeFromParent();
+                element = null; //THis should remove it permanently.
+                active_cannonballs--;
+                
+            }
+             //Remove it if distance is radius + safety distance.
         }
     }
 }

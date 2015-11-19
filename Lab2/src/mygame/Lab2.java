@@ -99,6 +99,7 @@ public class Lab2 extends SimpleApplication {
     protected int[] active_cans = {0,0,0}; //Large, medium, small.
     protected int userScore = 0;
     protected float time = 0f;
+    protected boolean run = true;
 
     private void initNodeTree(){
         //Node setup
@@ -539,6 +540,8 @@ public class Lab2 extends SimpleApplication {
         listener.setLocation(cam.getLocation());
         listener.setRotation(cam.getRotation());
         
+        time += tpf;
+        
         List<Spatial> cannonballs = allProjectiles.getChildren();
         tracePrint("All cannonball objects","UPDATE");
         for (int i=0;i<cannonballs.size();i++){
@@ -566,7 +569,9 @@ public class Lab2 extends SimpleApplication {
                         if (checkForXZCollision(cannonball, can)) {
                             cannonball.removeFromParent();
                             int points = can.getUserData("Value");
-                            userScore += points;
+                            if (run) {
+                                userScore += points;
+                            }
                             can.removeFromParent();
                             active_cans[can.getUserData("Index")]--;
                             populatePlayingField();
@@ -581,6 +586,10 @@ public class Lab2 extends SimpleApplication {
                 //Check if we're out of bounds.
                 
             }
+        }
+        
+        if (time >= 30f) {
+            run = false;
         }
     }
     

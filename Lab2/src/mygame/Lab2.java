@@ -93,13 +93,17 @@ public class Lab2 extends SimpleApplication {
     protected Node laserNode;
     protected Node allProjectiles;
     protected Node allCans;
+    protected BitmapText hudText;
     protected AudioNode cannonAudioNode;
+    
+    protected Quaternion resetBase;
+    
     protected boolean laser_on = false;
     protected int active_cannonballs = 0;
     protected int[] active_cans = {0,0,0}; //Large, medium, small.
-    protected int userScore = 0;
-    protected float time = 0f;
-    protected boolean run = true;
+    protected int userScore;
+    protected float time;
+    protected boolean run;
 
     private void initNodeTree(){
         //Node setup
@@ -127,6 +131,7 @@ public class Lab2 extends SimpleApplication {
         //Node positioning.
         playingFieldNode.setLocalTranslation(0f, -150f, -350f);
         baseNode.setLocalTranslation(0f, 0, PLAYINGFIELD_RADIUS);
+        
         supportPlateNode.setLocalTranslation(0,CANNON_BASE_HEIGHT*0.5f,0);
         cannonNode.setLocalTranslation(0,CANNON_BARREL_RADIUS,
                   CANNON_BARREL_LENGTH*-0.5f);
@@ -136,6 +141,8 @@ public class Lab2 extends SimpleApplication {
         allProjectiles.setLocalTranslation(0,
                 CANNON_BASE_HEIGHT*0.5f+CANNON_BARREL_RADIUS,
                 PLAYINGFIELD_RADIUS);
+        
+        resetBase = baseNode.getLocalRotation();
 
     }
 
@@ -218,13 +225,14 @@ public class Lab2 extends SimpleApplication {
         //toggle actions:
         inputManager.addMapping("Toggle laser",  new KeyTrigger(KeyInput.KEY_L));
         inputManager.addMapping("Shoot", new KeyTrigger(KeyInput.KEY_SPACE));
+        inputManager.addMapping("Restart", new KeyTrigger(KeyInput.KEY_R));
         
         //Analog actions
         inputManager.addMapping("Turn left",  new KeyTrigger(KeyInput.KEY_H));
         inputManager.addMapping("Turn right",  new KeyTrigger(KeyInput.KEY_K));
 
         // Add the names to the action listener.
-        inputManager.addListener(actionListener, "Toggle laser", "Shoot");
+        inputManager.addListener(actionListener, "Toggle laser", "Shoot","Restart");
         inputManager.addListener(analogListener,"Turn left", "Turn right");
   };
 
@@ -240,17 +248,17 @@ public class Lab2 extends SimpleApplication {
     }
     
     //Reuse this for HUD
-    protected void initCrossHairs() {
-        /*
-        setDisplayStatView(false);
-        guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
-        BitmapText ch = new BitmapText(guiFont, false);
-        ch.setSize(guiFont.getCharSet().getRenderedSize() * 2);
-        ch.setText("+"); // crosshairs
-        ch.setLocalTranslation( // center
-            settings.getWidth() / 2 - ch.getLineWidth()/2, settings.getHeight() / 2 + ch.getLineHeight()/2, 0);
-        guiNode.attachChild(ch);
-        */
+    protected void initHUD() {
+        setDisplayStatView(false); 
+        setDisplayFps(false);
+        hudText = new BitmapText(guiFont, false);          
+        hudText.setSize(guiFont.getCharSet().getRenderedSize());      // font size
+        hudText.setColor(ColorRGBA.White);                             // font color
+        hudText.setText((float)Math.round(time * 100d) / 100d+"\n"+userScore);             // the text
+        hudText.setLocalTranslation(0, settings.getHeight(), 0); // position
+        hudText.setQueueBucket(Bucket.Gui);
+        guiNode.attachChild(hudText);
+        
     }
     
     protected void initLight() {
@@ -264,6 +272,11 @@ public class Lab2 extends SimpleApplication {
         AmbientLight al = new AmbientLight();
         al.setColor(ColorRGBA.White.mult(0.3f));
         rootNode.addLight(al);
+        
+        //Make sure the GUI text is visible
+        AmbientLight al2 = new AmbientLight();
+        al2.setColor(ColorRGBA.White.mult(1f));
+        guiNode.addLight(al2);
         
         //This is for shininess of laser.
         FilterPostProcessor fpp=new FilterPostProcessor(assetManager);
@@ -435,13 +448,22 @@ public class Lab2 extends SimpleApplication {
         initNodeTree();
         initLight();
         initShapes();
+        initHUD();
         
         initKeys();
         initSound();
         
         populatePlayingField();
         
-        flyCam.setMoveSpeed(60);
+        cam.lookAt(playingFieldNode.getWorldTranslation(),Vector3f.UNIT_Y);
+        flyCam.setEnabled(false);
+        //flyCam.setMoveSpeed(0);
+        
+        run=true;
+        time=0f;
+        userScore=0;
+        
+        //flyCam.setMoveSpeed(60);
     };
     
     private void checkForOutOfBounds(Spatial cannonball) {
@@ -492,7 +514,7 @@ public class Lab2 extends SimpleApplication {
 
     private ActionListener actionListener = new ActionListener() {
         public void onAction(String name, boolean keyPressed, float tpf) {
-            if (name.equals("Toggle laser") && keyPressed) {
+            if (name.equals("Toggle laser") && keyPressed && run) {
                 laser_on = !laser_on; //This will flip between off and on.
 
                 //typecasting is not good, but Laser should only be
@@ -508,7 +530,7 @@ public class Lab2 extends SimpleApplication {
                 }
                 laser.setMaterial(laser_red);
             }
-            if (name.equals("Shoot") && keyPressed) {
+            if (name.equals("Shoot") && keyPressed && run) {
                 if (allProjectiles.getChildren().size() < CANNONBALL_NUM) {
                     Node cannonball = makeCannonball();
                     allProjectiles.attachChild(cannonball);
@@ -519,6 +541,22 @@ public class Lab2 extends SimpleApplication {
                     cannonAudioNode.playInstance();
                 }
             }
+            if (name.equals("Restart") && !keyPressed) {
+                allCans.detachAllChildren();
+                allProjectiles.detachAllChildren();
+                //Need to spin basenode to center.
+                //An alternative could be to remove the baseNode and reconstruct it.
+                active_cans[0] = 0;
+                active_cans[1] = 0;
+                active_cans[2] = 0;
+                populatePlayingField();
+                baseNode.setLocalRotation(resetBase);
+                run=true;
+                time=0f;
+                userScore=0;
+                restart();
+                //Consider some soft restart function.
+            }
         }
     };
 
@@ -526,10 +564,10 @@ public class Lab2 extends SimpleApplication {
 
         //inputManager.addListener(analogListener,"Backward","Forward","Shrink","Grow");
         public void onAnalog(String name, float value, float tpf) {
-            if (name.equals("Turn left")) {
+            if (name.equals("Turn left") && run) {
                 baseNode.rotate(0,tpf*CANNON_ROTATION_SPEED*0.1f,0);
             }
-            if (name.equals("Turn right")) {
+            if (name.equals("Turn right") && run) {
                 baseNode.rotate(0,tpf*-CANNON_ROTATION_SPEED*0.1f,0);
             }
         }
@@ -539,9 +577,8 @@ public class Lab2 extends SimpleApplication {
     public void simpleUpdate(float tpf) {
         listener.setLocation(cam.getLocation());
         listener.setRotation(cam.getRotation());
-        
-        time += tpf;
-        
+
+        hudText.setText((float)Math.round(time * 100d) / 100d+"\n"+userScore);
         List<Spatial> cannonballs = allProjectiles.getChildren();
         tracePrint("All cannonball objects","UPDATE");
         for (int i=0;i<cannonballs.size();i++){
@@ -590,6 +627,8 @@ public class Lab2 extends SimpleApplication {
         
         if (time >= 30f) {
             run = false;
+        } else {
+            time += tpf;
         }
     }
     

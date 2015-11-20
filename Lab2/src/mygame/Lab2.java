@@ -228,8 +228,8 @@ public class Lab2 extends SimpleApplication {
         inputManager.addMapping("Restart", new KeyTrigger(KeyInput.KEY_R));
         
         //Analog actions
-        inputManager.addMapping("Turn left",  new KeyTrigger(KeyInput.KEY_H));
-        inputManager.addMapping("Turn right",  new KeyTrigger(KeyInput.KEY_K));
+        inputManager.addMapping("Turn left",  new KeyTrigger(KeyInput.KEY_A));
+        inputManager.addMapping("Turn right",  new KeyTrigger(KeyInput.KEY_D));
 
         // Add the names to the action listener.
         inputManager.addListener(actionListener, "Toggle laser", "Shoot","Restart");

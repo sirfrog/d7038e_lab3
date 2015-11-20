@@ -24,6 +24,8 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.scene.shape.Sphere;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.List;
 import java.util.Random;
 
@@ -153,6 +155,7 @@ public class Lab2 extends SimpleApplication {
                 PLAYINGFIELD_RESOLUTION,PLAYINGFIELD_RADIUS,PLAYINGFIELD_HEIGHT,
                 true);
         Geometry playingField = new Geometry("Playing Field", playingFieldCyl);
+        
         Material grass = new Material(assetManager,
                 "Common/MatDefs/Light/Lighting.j3md");
         grass.setBoolean("UseMaterialColors",true);
@@ -160,6 +163,10 @@ public class Lab2 extends SimpleApplication {
         grass.setColor("Diffuse", new ColorRGBA(0,0.5f,0,0));
         //Somewhat less eye-searing green.
         playingField.setMaterial(grass);
+        /*
+        playingField.setMaterial((Material) assetManager.loadMaterial( 
+            "Textures/Terrain/BrickWall/BrickWall2.j3m"));
+        */
         playingField.rotate(90*FastMath.DEG_TO_RAD,0,0);
         playingFieldNode.attachChild(playingField);
         
@@ -254,7 +261,7 @@ public class Lab2 extends SimpleApplication {
         hudText = new BitmapText(guiFont, false);          
         hudText.setSize(guiFont.getCharSet().getRenderedSize());      // font size
         hudText.setColor(ColorRGBA.White);                             // font color
-        hudText.setText((float)Math.round(time * 100d) / 100d+"\n"+userScore);             // the text
+        hudText.setText(formatTime(time)+"\n"+userScore);
         hudText.setLocalTranslation(0, settings.getHeight(), 0); // position
         hudText.setQueueBucket(Bucket.Gui);
         guiNode.attachChild(hudText);
@@ -290,14 +297,18 @@ public class Lab2 extends SimpleApplication {
         Sphere cannonballSphere = new Sphere(CANNONBALL_RESOLUTION, 
                 CANNONBALL_RESOLUTION, CANNONBALL_RADIUS);
         Geometry cannonball = new Geometry("Cannonball", cannonballSphere);
-        Material dark_metal = new Material(assetManager,
+
+        Material stone = new Material(assetManager,
                 "Common/MatDefs/Light/Lighting.j3md");
-        dark_metal.setBoolean("UseMaterialColors",true);
-        dark_metal.setColor("Ambient", ColorRGBA.DarkGray); 
-        dark_metal.setColor("Diffuse", ColorRGBA.DarkGray); 
-        dark_metal.setColor("Specular", ColorRGBA.White);
-        dark_metal.setFloat("Shininess", 64f);
-        cannonball.setMaterial(dark_metal);
+        stone.setTexture("DiffuseMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock.PNG"));
+        stone.setTexture("NormalMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock_normal.png"));
+        stone.setBoolean("UseMaterialColors",true);
+        stone.setColor("Ambient", ColorRGBA.DarkGray); 
+        stone.setColor("Diffuse", ColorRGBA.White); 
+        stone.setColor("Specular", ColorRGBA.White);
+        cannonball.setMaterial(stone);
         
         Node cannonballNode = new Node("Cannonball Node");
         cannonballNode.attachChild(cannonball);
@@ -311,6 +322,7 @@ public class Lab2 extends SimpleApplication {
                 CAN_RESOLUTION,SMALLCAN_RADIUS,SMALLCAN_HEIGHT,
                 true);
         Geometry smallCan = new Geometry("Can", smallCanCyl);
+        /*
         Material blue_metal = new Material(assetManager,
                 "Common/MatDefs/Light/Lighting.j3md");
         blue_metal.setBoolean("UseMaterialColors",true);
@@ -319,6 +331,19 @@ public class Lab2 extends SimpleApplication {
         blue_metal.setColor("Specular", ColorRGBA.White);
         blue_metal.setFloat("Shininess", 64f);
         smallCan.setMaterial(blue_metal);
+        */
+        Material stone = new Material(assetManager,
+                "Common/MatDefs/Light/Lighting.j3md");
+        stone.setTexture("DiffuseMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock.PNG"));
+        stone.setTexture("NormalMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock_normal.png"));
+        stone.setBoolean("UseMaterialColors",true);
+        stone.setColor("Ambient", ColorRGBA.Red); 
+        stone.setColor("Diffuse", ColorRGBA.Red); 
+        stone.setColor("Specular", ColorRGBA.White);
+        smallCan.setMaterial(stone);
+        
         smallCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
         
         Node smallCanNode = new Node("Can");
@@ -337,14 +362,19 @@ public class Lab2 extends SimpleApplication {
                 CAN_RESOLUTION,MEDIUMCAN_RADIUS,MEDIUMCAN_HEIGHT,
                 true);
         Geometry mediumCan = new Geometry("Can", mediumCanCyl);
-        Material purple_metal = new Material(assetManager,
+        
+        Material stone = new Material(assetManager,
                 "Common/MatDefs/Light/Lighting.j3md");
-        purple_metal.setBoolean("UseMaterialColors",true);
-        purple_metal.setColor("Ambient", ColorRGBA.Orange); 
-        purple_metal.setColor("Diffuse", ColorRGBA.Orange);
-        purple_metal.setColor("Specular", ColorRGBA.White);
-        purple_metal.setFloat("Shininess", 64f);
-        mediumCan.setMaterial(purple_metal);
+        stone.setTexture("DiffuseMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock.PNG"));
+        stone.setTexture("NormalMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock_normal.png"));
+        stone.setBoolean("UseMaterialColors",true);
+        stone.setColor("Ambient", ColorRGBA.Orange); 
+        stone.setColor("Diffuse", ColorRGBA.Orange); 
+        stone.setColor("Specular", ColorRGBA.White);
+        mediumCan.setMaterial(stone);
+        
         mediumCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
         
         Node mediumCanNode = new Node("Can");
@@ -363,14 +393,19 @@ public class Lab2 extends SimpleApplication {
                 CAN_RESOLUTION,LARGECAN_RADIUS,LARGECAN_HEIGHT,
                 true);
         Geometry largeCan = new Geometry("Can", largeCanCyl);
-        Material pink_metal = new Material(assetManager,
+        
+        Material stone = new Material(assetManager,
                 "Common/MatDefs/Light/Lighting.j3md");
-        pink_metal.setBoolean("UseMaterialColors",true);
-        pink_metal.setColor("Ambient", ColorRGBA.Yellow); 
-        pink_metal.setColor("Diffuse", ColorRGBA.Yellow);
-        pink_metal.setColor("Specular", ColorRGBA.White);
-        pink_metal.setFloat("Shininess", 64f);
-        largeCan.setMaterial(pink_metal);
+        stone.setTexture("DiffuseMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock.PNG"));
+        stone.setTexture("NormalMap",assetManager.loadTexture(
+                "Textures/Terrain/Rock/Rock_normal.png"));
+        stone.setBoolean("UseMaterialColors",true);
+        stone.setColor("Ambient", ColorRGBA.Yellow); 
+        stone.setColor("Diffuse", ColorRGBA.Yellow); 
+        stone.setColor("Specular", ColorRGBA.White);
+        largeCan.setMaterial(stone);
+        
         largeCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
         
         Node largeCanNode = new Node("Can");
@@ -460,7 +495,7 @@ public class Lab2 extends SimpleApplication {
         //flyCam.setMoveSpeed(0);
         
         run=true;
-        time=0f;
+        time=30f;
         userScore=0;
         
         //flyCam.setMoveSpeed(60);
@@ -552,7 +587,8 @@ public class Lab2 extends SimpleApplication {
                 populatePlayingField();
                 baseNode.setLocalRotation(resetBase);
                 run=true;
-                time=0f;
+                laser_on=false;
+                time=30f;
                 userScore=0;
                 restart();
                 //Consider some soft restart function.
@@ -573,23 +609,24 @@ public class Lab2 extends SimpleApplication {
         }
     };
     
+    private String formatTime(float time) {
+        NumberFormat formatter = new DecimalFormat("00.00");
+        return formatter.format(time);
+    }
+    
     @Override
     public void simpleUpdate(float tpf) {
         listener.setLocation(cam.getLocation());
         listener.setRotation(cam.getRotation());
 
-        hudText.setText((float)Math.round(time * 100d) / 100d+"\n"+userScore);
+        //Format this properly.
+        //hudText.setText((float)Math.round(time * 100d) / 100d+"\n"+userScore);
+        hudText.setText(formatTime(time)+"\n"+userScore);
+        
         List<Spatial> cannonballs = allProjectiles.getChildren();
-        tracePrint("All cannonball objects","UPDATE");
-        for (int i=0;i<cannonballs.size();i++){
-            tracePrint("Name: "+cannonballs.get(i).toString());
-        }
         
         List<Spatial> cans = allCans.getChildren();
-        tracePrint("All can objects","UPDATE");
-        for (int i=0;i<cans.size();i++){
-            tracePrint("Name: "+cans.get(i).toString());
-        }
+
         
         for (int i = 0; i < cannonballs.size(); i++) {
             Spatial cannonball = cannonballs.get(i);
@@ -598,6 +635,10 @@ public class Lab2 extends SimpleApplication {
             //but we're checking anyway.
             if (cannonball.getName().equals("Cannonball Node")) {    
                 moveForwardZ(cannonball, -CANNONBALL_SPEED, tpf);
+                Node cNode = (Node)cannonball;
+                cNode.getChild("Cannonball").rotate(
+                        -CANNONBALL_SPEED*tpf/(CANNONBALL_RADIUS),
+                        0, 0);
                 for (int j = 0; j < cans.size(); j++) {
                     //Check for collisions.
                     Spatial can = cans.get(j);
@@ -625,10 +666,11 @@ public class Lab2 extends SimpleApplication {
             }
         }
         
-        if (time >= 30f) {
+        if (time <= 0f) {
+            time = 0f;
             run = false;
         } else {
-            time += tpf;
+            time -= tpf;
         }
     }
     

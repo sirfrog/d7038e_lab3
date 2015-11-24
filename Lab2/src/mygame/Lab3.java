@@ -24,18 +24,23 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.scene.shape.Sphere;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Random;
-
-
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 
 /** Sample 2 - How to use nodes as handles to manipulate objects in the scene.
  * You can rotate, translate, and scale objects by manipulating their parent nodes.
  * The Root Node is special: Only what is attached to the Root Node appears in the scene. */
-public class Lab2 extends SimpleApplication {
+public class Lab3 extends SimpleApplication {
     //Integer constants
     public static final int PLAYINGFIELD_RESOLUTION = 100;
     public static final int CAN_RESOLUTION = 100;
@@ -83,8 +88,22 @@ public class Lab2 extends SimpleApplication {
     public boolean verbose = false;
     
     public static void main(String[] args){
-        Lab2 app = new Lab2();
-        app.start();
+        //Lab3 app = new Lab3();
+        JFrame frame = new JFrame("Cannon-Can Game");
+        JPanel panel = new JPanel();
+        panel.setLayout(new FlowLayout());
+        JLabel label = new JLabel("Please enter name and server address.");
+        JButton button = new JButton();
+        button.setText("Play!");
+        panel.add(label);
+        panel.add(button);
+        frame.add(panel);
+        frame.setSize(300, 300);
+        frame.setLocationRelativeTo(null);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+        
+        //app.start();
     }
 
     //Variables that are useful to reach from anywhere.

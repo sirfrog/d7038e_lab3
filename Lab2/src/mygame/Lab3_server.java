@@ -27,8 +27,6 @@ import com.jme3.scene.shape.Sphere;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
@@ -37,13 +35,12 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 
 
 /** Sample 2 - How to use nodes as handles to manipulate objects in the scene.
  * You can rotate, translate, and scale objects by manipulating their parent nodes.
  * The Root Node is special: Only what is attached to the Root Node appears in the scene. */
-public class Lab3 extends SimpleApplication implements java.awt.event.ActionListener {
+public class Lab3_server extends SimpleApplication {
     //Integer constants
     public static final int PLAYINGFIELD_RESOLUTION = 100;
     public static final int CAN_RESOLUTION = 100;
@@ -87,52 +84,26 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     public static final float PLAYINGFIELD_HEIGHT = 2.3f * CANNON_BARREL_RADIUS;
     public static final float LASER_SIDE = 0.3f;
     public static final float LASER_LENGTH = PLAYINGFIELD_RADIUS *2f;
-    public static final int MAX_NICK_LENGTH = 8;
 
     public boolean verbose = false;
-    private JFrame frame;
-    private JButton button;
-    private JTextField nick;
-    private JTextField address;
-    private String serverAddress;
-    private String nickname;
-    public boolean go = false;
-    public boolean run = true;
-            
-    public static void main(String[] args){
-        Lab3 app = new Lab3();
-        
-    }
     
-    public Lab3() {    
-        frame = new JFrame("Cannon-Can Game");
+    public static void main(String[] args){
+        //Lab3 app = new Lab3();
+        JFrame frame = new JFrame("Cannon-Can Game");
         JPanel panel = new JPanel();
-        nick = new JTextField(8);
-        address = new JTextField(20);
-        JLabel namelabel = new JLabel("Please enter nickname (max 8 chars).");
-        JLabel namelabel2 = new JLabel("Longer names will be cut to size.");
-        JLabel serverlabel = new JLabel("Please enter server address.");
         panel.setLayout(new FlowLayout());
-        button = new JButton();
+        JLabel label = new JLabel("Please enter name and server address.");
+        JButton button = new JButton();
         button.setText("Play!");
-        button.java.awt.event.addActionListener(this);
-        panel.add(namelabel);
-        panel.add(namelabel2);
-        panel.add(nick);
-        panel.add(serverlabel);
-        panel.add(address);
+        panel.add(label);
         panel.add(button);
         frame.add(panel);
         frame.setSize(300, 300);
         frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
-    }
-    
-    public void actionPerformed(ActionEvent evt) {
-        serverAddress = address.getText();
-        nickname = nick.getText().substring(0, Math.min(nick.getText().length(), 
-        MAX_NICK_LENGTH));
+        
+        //app.start();
     }
 
     //Variables that are useful to reach from anywhere.
@@ -153,7 +124,7 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     protected int[] active_cans = {0,0,0}; //Large, medium, small.
     protected int userScore;
     protected float time;
-    protected boolean run_program;
+    protected boolean run;
 
     private void initNodeTree(){
         //Node setup
@@ -728,9 +699,5 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     
     public void tracePrint(String message, String area ){
         if (verbose) { System.out.println("["+area+"] "+message); }
-    }
-
-    public void onAction(String name, boolean isPressed, float tpf) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

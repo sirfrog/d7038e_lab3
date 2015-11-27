@@ -24,26 +24,16 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Cylinder;
 import com.jme3.scene.shape.Sphere;
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Random;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 
 
 /** Sample 2 - How to use nodes as handles to manipulate objects in the scene.
  * You can rotate, translate, and scale objects by manipulating their parent nodes.
  * The Root Node is special: Only what is attached to the Root Node appears in the scene. */
-public class Lab3 extends SimpleApplication implements java.awt.event.ActionListener {
+public class Lab3 extends SimpleApplication{
     //Integer constants
     public static final int PLAYINGFIELD_RESOLUTION = 100;
     public static final int CAN_RESOLUTION = 100;
@@ -57,6 +47,8 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     public static final int SMALLCAN_VALUE = 40;
     public static final int CANS_NUM = LARGECAN_NUM + MEDIUMCAN_NUM + 
                                        SMALLCAN_NUM;
+    public static final int MAX_CHARS = 8;
+    public static final int MAX_PLAYERS = 20;
     
     //Float constants
     public static final float DEAD_MARGIN = 1f;
@@ -82,57 +74,25 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     public static final float CANNON_BASE_RADIUS = 3f * CANNON_BARREL_RADIUS;
     public static final float CANNON_BASE_HEIGHT = 3f * CANNON_BARREL_RADIUS;
     public static final float CANNON_ROTATION_SPEED = 20f;
+    public static final float TIMEOUT = 5.0f;
+    
     
     //My own constants.
     public static final float PLAYINGFIELD_HEIGHT = 2.3f * CANNON_BARREL_RADIUS;
     public static final float LASER_SIDE = 0.3f;
     public static final float LASER_LENGTH = PLAYINGFIELD_RADIUS *2f;
-    public static final int MAX_NICK_LENGTH = 8;
+    //A small fudge factor to ensure that cannons are not placed too closely.
+    public static final float STACKING_MARGIN = CANNON_BARREL_LENGTH +0.5f;
+    
 
-    public boolean verbose = false;
-    private JFrame frame;
-    private JButton button;
-    private JTextField nick;
-    private JTextField address;
-    private String serverAddress;
-    private String nickname;
-    public boolean go = false;
-    public boolean run = true;
-            
-    public static void main(String[] args){
-        Lab3 app = new Lab3();
-        
-    }
+    private boolean verbose = false;
+    private boolean run = true;
+    private String nick;
+    private String address;
     
-    public Lab3() {    
-        frame = new JFrame("Cannon-Can Game");
-        JPanel panel = new JPanel();
-        nick = new JTextField(8);
-        address = new JTextField(20);
-        JLabel namelabel = new JLabel("Please enter nickname (max 8 chars).");
-        JLabel namelabel2 = new JLabel("Longer names will be cut to size.");
-        JLabel serverlabel = new JLabel("Please enter server address.");
-        panel.setLayout(new FlowLayout());
-        button = new JButton();
-        button.setText("Play!");
-        button.java.awt.event.addActionListener(this);
-        panel.add(namelabel);
-        panel.add(namelabel2);
-        panel.add(nick);
-        panel.add(serverlabel);
-        panel.add(address);
-        panel.add(button);
-        frame.add(panel);
-        frame.setSize(300, 300);
-        frame.setLocationRelativeTo(null);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-    }
-    
-    public void actionPerformed(ActionEvent evt) {
-        serverAddress = address.getText();
-        nickname = nick.getText().substring(0, Math.min(nick.getText().length(), 
-        MAX_NICK_LENGTH));
+    public Lab3(String nick, String address){
+        this.nick = nick;
+        this.address = address;
     }
 
     //Variables that are useful to reach from anywhere.
@@ -146,6 +106,8 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     protected BitmapText hudText;
     protected AudioNode cannonAudioNode;
     
+    //Solve this by putting a the basenode into a second node.
+    //Distance needed turns out to be ~25.5 if maximally packed.
     protected Quaternion resetBase;
     
     protected boolean laser_on = false;
@@ -211,10 +173,7 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
         grass.setColor("Diffuse", new ColorRGBA(0,0.5f,0,0));
         //Somewhat less eye-searing green.
         playingField.setMaterial(grass);
-        /*
-        playingField.setMaterial((Material) assetManager.loadMaterial( 
-            "Textures/Terrain/BrickWall/BrickWall2.j3m"));
-        */
+
         playingField.rotate(90*FastMath.DEG_TO_RAD,0,0);
         playingFieldNode.attachChild(playingField);
         
@@ -366,33 +325,9 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     
     //Makes a small can geometry attached to a node
     private Node makeSmallCan(){
-        Cylinder smallCanCyl = new Cylinder(CAN_RESOLUTION,
-                CAN_RESOLUTION,SMALLCAN_RADIUS,SMALLCAN_HEIGHT,
-                true);
-        Geometry smallCan = new Geometry("Can", smallCanCyl);
-        /*
-        Material blue_metal = new Material(assetManager,
-                "Common/MatDefs/Light/Lighting.j3md");
-        blue_metal.setBoolean("UseMaterialColors",true);
-        blue_metal.setColor("Ambient", ColorRGBA.Red); 
-        blue_metal.setColor("Diffuse", ColorRGBA.Red);
-        blue_metal.setColor("Specular", ColorRGBA.White);
-        blue_metal.setFloat("Shininess", 64f);
-        smallCan.setMaterial(blue_metal);
-        */
-        Material stone = new Material(assetManager,
-                "Common/MatDefs/Light/Lighting.j3md");
-        stone.setTexture("DiffuseMap",assetManager.loadTexture(
-                "Textures/Terrain/Rock/Rock.PNG"));
-        stone.setTexture("NormalMap",assetManager.loadTexture(
-                "Textures/Terrain/Rock/Rock_normal.png"));
-        stone.setBoolean("UseMaterialColors",true);
-        stone.setColor("Ambient", ColorRGBA.Red); 
-        stone.setColor("Diffuse", ColorRGBA.Red); 
-        stone.setColor("Specular", ColorRGBA.White);
-        smallCan.setMaterial(stone);
-        
-        smallCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
+
+        Geometry smallCan = makeCanGeometry(SMALLCAN_RADIUS,SMALLCAN_HEIGHT, 
+                ColorRGBA.Red);
         
         Node smallCanNode = new Node("Can");
         smallCanNode.attachChild(smallCan);
@@ -400,30 +335,14 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
         smallCanNode.setUserData("Value", SMALLCAN_VALUE);
         smallCanNode.setUserData("Index", 2);
         
-        smallCan.setLocalTranslation(0, PLAYINGFIELD_HEIGHT/2+SMALLCAN_HEIGHT/2, 0);
         return smallCanNode;
     }
     
     //Makes a medium can geometry attached to a node
     private Node makeMediumCan(){
-        Cylinder mediumCanCyl = new Cylinder(CAN_RESOLUTION,
-                CAN_RESOLUTION,MEDIUMCAN_RADIUS,MEDIUMCAN_HEIGHT,
-                true);
-        Geometry mediumCan = new Geometry("Can", mediumCanCyl);
         
-        Material stone = new Material(assetManager,
-                "Common/MatDefs/Light/Lighting.j3md");
-        stone.setTexture("DiffuseMap",assetManager.loadTexture(
-                "Textures/Terrain/Rock/Rock.PNG"));
-        stone.setTexture("NormalMap",assetManager.loadTexture(
-                "Textures/Terrain/Rock/Rock_normal.png"));
-        stone.setBoolean("UseMaterialColors",true);
-        stone.setColor("Ambient", ColorRGBA.Orange); 
-        stone.setColor("Diffuse", ColorRGBA.Orange); 
-        stone.setColor("Specular", ColorRGBA.White);
-        mediumCan.setMaterial(stone);
-        
-        mediumCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
+        Geometry mediumCan = makeCanGeometry(MEDIUMCAN_RADIUS,MEDIUMCAN_HEIGHT, 
+                ColorRGBA.Orange);
         
         Node mediumCanNode = new Node("Can");
         mediumCanNode.attachChild(mediumCan);
@@ -431,17 +350,27 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
         mediumCanNode.setUserData("Value", MEDIUMCAN_VALUE);
         mediumCanNode.setUserData("Index", 1);
         
-        mediumCan.setLocalTranslation(0, PLAYINGFIELD_HEIGHT/2+MEDIUMCAN_HEIGHT/2, 0);
         return mediumCanNode;
     }
     
     //Makes a large can geometry attached to a node
     private Node makeLargeCan(){
-        Cylinder largeCanCyl = new Cylinder(CAN_RESOLUTION,
-                CAN_RESOLUTION,LARGECAN_RADIUS,LARGECAN_HEIGHT,
+        Geometry largeCan = makeCanGeometry(LARGECAN_RADIUS,LARGECAN_HEIGHT, 
+                ColorRGBA.Yellow);
+        Node largeCanNode = new Node("Can");
+        largeCanNode.attachChild(largeCan);
+        largeCanNode.setUserData("Radius", LARGECAN_RADIUS);
+        largeCanNode.setUserData("Value", LARGECAN_VALUE);
+        largeCanNode.setUserData("Index", 0);
+                
+        return largeCanNode;
+    }
+    
+    private Geometry makeCanGeometry(Float radius, Float height, ColorRGBA color){
+        Cylinder canCyl = new Cylinder(CAN_RESOLUTION,
+                CAN_RESOLUTION,radius,height,
                 true);
-        Geometry largeCan = new Geometry("Can", largeCanCyl);
-        
+        Geometry can = new Geometry("Can", canCyl);
         Material stone = new Material(assetManager,
                 "Common/MatDefs/Light/Lighting.j3md");
         stone.setTexture("DiffuseMap",assetManager.loadTexture(
@@ -449,21 +378,14 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
         stone.setTexture("NormalMap",assetManager.loadTexture(
                 "Textures/Terrain/Rock/Rock_normal.png"));
         stone.setBoolean("UseMaterialColors",true);
-        stone.setColor("Ambient", ColorRGBA.Yellow); 
-        stone.setColor("Diffuse", ColorRGBA.Yellow); 
+        stone.setColor("Ambient", color); 
+        stone.setColor("Diffuse", color); 
         stone.setColor("Specular", ColorRGBA.White);
-        largeCan.setMaterial(stone);
+        can.setMaterial(stone);
         
-        largeCan.rotate(90*FastMath.DEG_TO_RAD,0,0);
-        
-        Node largeCanNode = new Node("Can");
-        largeCanNode.attachChild(largeCan);
-        largeCanNode.setUserData("Radius", LARGECAN_RADIUS);
-        largeCanNode.setUserData("Value", LARGECAN_VALUE);
-        largeCanNode.setUserData("Index", 0);
-                
-        largeCan.setLocalTranslation(0, PLAYINGFIELD_HEIGHT/2+LARGECAN_HEIGHT/2, 0);
-        return largeCanNode;
+        can.rotate(90*FastMath.DEG_TO_RAD,0,0);
+        can.setLocalTranslation(0, PLAYINGFIELD_HEIGHT/2+height/2, 0);
+        return can;
     }
     
     private void populatePlayingField(){
@@ -555,6 +477,7 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
             cannonball.removeFromParent();
         }
     }
+    //private Vector3f 
     
     private float checkXZDistance(Spatial A, Spatial B) {
         Vector3f a_vector = A.getWorldTranslation();
@@ -649,10 +572,10 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
         //inputManager.addListener(analogListener,"Backward","Forward","Shrink","Grow");
         public void onAnalog(String name, float value, float tpf) {
             if (name.equals("Turn left") && run) {
-                baseNode.rotate(0,tpf*CANNON_ROTATION_SPEED*0.1f,0);
+                baseNode.rotate(0,tpf*CANNON_ROTATION_SPEED*FastMath.DEG_TO_RAD,0);
             }
             if (name.equals("Turn right") && run) {
-                baseNode.rotate(0,tpf*-CANNON_ROTATION_SPEED*0.1f,0);
+                baseNode.rotate(0,tpf*-CANNON_ROTATION_SPEED*FastMath.DEG_TO_RAD,0);
             }
         }
     };
@@ -704,11 +627,9 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
                         } else {
                             checkForOutOfBounds(cannonball);
                         }
-                    } else {
-                        checkForOutOfBounds(cannonball);
                     }
-                    
                 }
+                checkForOutOfBounds(cannonball);
                 //Check if we're out of bounds.
                 
             }
@@ -728,9 +649,5 @@ public class Lab3 extends SimpleApplication implements java.awt.event.ActionList
     
     public void tracePrint(String message, String area ){
         if (verbose) { System.out.println("["+area+"] "+message); }
-    }
-
-    public void onAction(String name, boolean isPressed, float tpf) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

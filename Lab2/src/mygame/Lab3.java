@@ -143,12 +143,13 @@ public class Lab3 extends SimpleApplication{
         //Node positioning.
         playingFieldNode.setLocalTranslation(0f, -150f, -350f);
         baseNode.setLocalTranslation(0f, 0, PLAYINGFIELD_RADIUS);
+        baseNode.lookAt(playingFieldNode.getLocalTranslation(), Vector3f.UNIT_Y);
         
         supportPlateNode.setLocalTranslation(0,CANNON_BASE_HEIGHT*0.5f,0);
         cannonNode.setLocalTranslation(0,CANNON_BARREL_RADIUS,
-                  CANNON_BARREL_LENGTH*-0.5f);
+                  CANNON_BARREL_LENGTH*0.5f);
         laserNode.setLocalTranslation(0,-CANNON_BARREL_RADIUS-LASER_SIDE,
-                  -LASER_LENGTH);
+                  LASER_LENGTH);
         //Cannonballs originate within the cannon.
         allProjectiles.setLocalTranslation(0,
                 CANNON_BASE_HEIGHT*0.5f+CANNON_BARREL_RADIUS,
@@ -517,33 +518,39 @@ public class Lab3 extends SimpleApplication{
         Vector3f forward = element.getLocalRotation().mult(Vector3f.UNIT_Z);
         element.move(forward.mult(distance));
     }
-
+    
+    private void alterLaserMode(boolean isActive) {
+        Geometry laser =(Geometry)laserNode.getChild("Laser"); 
+        Material laser_red = laser.getMaterial();
+        if (isActive) {
+            laser_red.setColor("Color", new ColorRGBA(1f,0f,0f,0.5f));
+            laser_red.setColor("GlowColor", ColorRGBA.Red);
+        } else {
+            laser_red.setColor("Color", new ColorRGBA(0f,0f,0f,0f));
+            laser_red.setColor("GlowColor", ColorRGBA.Black);
+        }
+        laser.setMaterial(laser_red);
+    }
+    
+    //Create a Toggle Laser function
     private ActionListener actionListener = new ActionListener() {
         public void onAction(String name, boolean keyPressed, float tpf) {
             if (name.equals("Toggle laser") && keyPressed && run) {
                 laser_on = !laser_on; //This will flip between off and on.
-
+                alterLaserMode(laser_on);
                 //typecasting is not good, but Laser should only be
                 //a geometry. Spatials don't have materials, normally.
-                Geometry laser =(Geometry)laserNode.getChild("Laser"); 
-                Material laser_red = laser.getMaterial();
-                if (laser_on) {
-                    laser_red.setColor("Color", new ColorRGBA(1f,0f,0f,0.5f));
-                    laser_red.setColor("GlowColor", ColorRGBA.Red);
-                } else {
-                    laser_red.setColor("Color", new ColorRGBA(0f,0f,0f,0f));
-                    laser_red.setColor("GlowColor", ColorRGBA.Black);
-                }
-                laser.setMaterial(laser_red);
+                
             }
             if (name.equals("Shoot") && keyPressed && run) {
                 if (allProjectiles.getChildren().size() < CANNONBALL_NUM) {
                     Node cannonball = makeCannonball();
                     allProjectiles.attachChild(cannonball);
+                    
                     Quaternion launchrotation = baseNode.getLocalRotation();
                     cannonball.rotate(launchrotation);
                     Vector3f forward = baseNode.getLocalRotation().mult(Vector3f.UNIT_Z);
-                    cannonball.setLocalTranslation(forward.mult(-CANNON_BARREL_LENGTH+CANNONBALL_RADIUS));
+                    cannonball.setLocalTranslation(forward.mult(CANNON_BARREL_LENGTH-CANNONBALL_RADIUS));
                     cannonAudioNode.playInstance();
                 }
             }
@@ -556,12 +563,13 @@ public class Lab3 extends SimpleApplication{
                 active_cans[1] = 0;
                 active_cans[2] = 0;
                 populatePlayingField();
-                baseNode.setLocalRotation(resetBase);
+                baseNode.lookAt(playingFieldNode.getLocalTranslation(), Vector3f.UNIT_Y);
                 run=true;
                 laser_on=false;
+                alterLaserMode(laser_on);
                 time=30f;
                 userScore=0;
-                restart();
+                //restart();
                 //Consider some soft restart function.
             }
         }
@@ -605,10 +613,10 @@ public class Lab3 extends SimpleApplication{
             //This condition should be entered for all nodes in AllProjectiles,
             //but we're checking anyway.
             if (cannonball.getName().equals("Cannonball Node")) {    
-                moveForwardZ(cannonball, -CANNONBALL_SPEED, tpf);
+                moveForwardZ(cannonball, CANNONBALL_SPEED, tpf);
                 Node cNode = (Node)cannonball;
                 cNode.getChild("Cannonball").rotate(
-                        -CANNONBALL_SPEED*tpf/(CANNONBALL_RADIUS),
+                        CANNONBALL_SPEED*tpf/(CANNONBALL_RADIUS),
                         0, 0);
                 for (int j = 0; j < cans.size(); j++) {
                     //Check for collisions.

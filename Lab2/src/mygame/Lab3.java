@@ -117,6 +117,30 @@ public class Lab3 extends SimpleApplication{
     protected float time;
     protected boolean run_program;
 
+    @Override
+    public void simpleInitApp() {
+        
+        initNodeTree();
+        initLight();
+        initShapes();
+        initHUD();
+        
+        initKeys();
+        initSound();
+        
+        populatePlayingField();
+        
+        cam.lookAt(playingFieldNode.getWorldTranslation(),Vector3f.UNIT_Y);
+        flyCam.setEnabled(false);
+        //flyCam.setMoveSpeed(0);
+        
+        run=true;
+        time=30f;
+        userScore=0;
+        
+        //flyCam.setMoveSpeed(60);
+    };
+    
     private void initNodeTree(){
         //Node setup
         playingFieldNode = new Node("playingFieldNode");
@@ -448,37 +472,13 @@ public class Lab3 extends SimpleApplication{
         }
     }
     
-    @Override
-    public void simpleInitApp() {
-        
-        initNodeTree();
-        initLight();
-        initShapes();
-        initHUD();
-        
-        initKeys();
-        initSound();
-        
-        populatePlayingField();
-        
-        cam.lookAt(playingFieldNode.getWorldTranslation(),Vector3f.UNIT_Y);
-        flyCam.setEnabled(false);
-        //flyCam.setMoveSpeed(0);
-        
-        run=true;
-        time=30f;
-        userScore=0;
-        
-        //flyCam.setMoveSpeed(60);
-    };
-    
     private void checkForOutOfBounds(Spatial cannonball) {
         float distance = checkXZDistance(cannonball,playingFieldNode);
         if (distance >= PLAYINGFIELD_RADIUS+DEAD_MARGIN ) {
             cannonball.removeFromParent();
         }
     }
-    //private Vector3f 
+    
     
     private float checkXZDistance(Spatial A, Spatial B) {
         Vector3f a_vector = A.getWorldTranslation();
@@ -532,6 +532,11 @@ public class Lab3 extends SimpleApplication{
         laser.setMaterial(laser_red);
     }
     
+    private String formatTime(float time) {
+        NumberFormat formatter = new DecimalFormat("00.00");
+        return formatter.format(time);
+    }
+    
     //Create a Toggle Laser function
     private ActionListener actionListener = new ActionListener() {
         public void onAction(String name, boolean keyPressed, float tpf) {
@@ -576,8 +581,6 @@ public class Lab3 extends SimpleApplication{
     };
 
     private AnalogListener analogListener = new AnalogListener() {
-
-        //inputManager.addListener(analogListener,"Backward","Forward","Shrink","Grow");
         public void onAnalog(String name, float value, float tpf) {
             if (name.equals("Turn left") && run) {
                 baseNode.rotate(0,tpf*CANNON_ROTATION_SPEED*FastMath.DEG_TO_RAD,0);
@@ -587,11 +590,6 @@ public class Lab3 extends SimpleApplication{
             }
         }
     };
-    
-    private String formatTime(float time) {
-        NumberFormat formatter = new DecimalFormat("00.00");
-        return formatter.format(time);
-    }
     
     @Override
     public void simpleUpdate(float tpf) {

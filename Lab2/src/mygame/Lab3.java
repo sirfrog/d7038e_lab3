@@ -85,7 +85,7 @@ public class Lab3 extends SimpleApplication{
     public static final float STACKING_MARGIN = CANNON_BARREL_LENGTH +0.5f;
     
 
-    private boolean verbose = false;
+    private boolean verbose = true;
     private boolean run = true;
     private String nick;
     private String address;
@@ -479,6 +479,21 @@ public class Lab3 extends SimpleApplication{
         }
     }
     
+    //In this function, the node a is considered the collider and the node b
+    // collided.
+    private void doCollisionCannonballs(Node a, Node b) {
+        tracePrint("Collided with something! Let's bounce!","BOUNCE");
+        Node temp = new Node();
+        a.attachChild(temp);
+        temp.lookAt(b.getWorldTranslation(), Vector3f.UNIT_Y);
+        float[] spin = new float[3];
+        temp.getLocalRotation().toAngles(spin);
+        temp.removeFromParent();
+        tracePrint("We've spun "+Float.toString(spin[1])+" degrees", "BOUNCE");
+        a.rotate(0, (FastMath.PI/2-spin[1])*-2, 0);
+        Geometry geom = (Geometry)a.getChild("Cannonball");
+        //geom.rotate(0, (FastMath.PI/2-spin[1])*2, 0);
+    }
     
     private float checkXZDistance(Spatial A, Spatial B) {
         Vector3f a_vector = A.getWorldTranslation();
@@ -623,6 +638,7 @@ public class Lab3 extends SimpleApplication{
                     if (can.getName().equals("Can")){
                         if (checkForXZCollision(cannonball, can)) {
                             cannonball.removeFromParent();
+                            //doCollisionCannonballs((Node)cannonball, (Node)can);
                             int points = can.getUserData("Value");
                             if (run) {
                                 userScore += points;

@@ -59,7 +59,7 @@ public class Startup implements ActionListener{
     public void actionPerformed(ActionEvent evt) {
         serverAddress = address.getText();
         nickname = nick.getText().substring(0, Math.min(nick.getText().length(), 
-        Lab3.MAX_CHARS));
+        Constants.MAX_CHARS));
         frame.dispose();
         app = new Lab3(nickname, serverAddress);
         new Thread(new Runnable(){

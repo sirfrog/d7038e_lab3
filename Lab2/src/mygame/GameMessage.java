@@ -4,6 +4,8 @@
  */
 package mygame;
 
+import com.jme3.math.Quaternion;
+import com.jme3.math.Vector3f;
 import com.jme3.network.AbstractMessage;
 import com.jme3.network.serializing.Serializable;
 import com.jme3.network.serializing.Serializer;
@@ -36,16 +38,19 @@ public class GameMessage {
         Serializer.registerClass(GameMessage.class);
     }
 
-    /*
-     * Infrastructure messages
-     */
+    // =======================================================================
+    // CLIENT -> SERVER
+    // =======================================================================
+    // -------
+    // Infrastructure
+    // -------
     @Serializable
     public static class ConnectMessage extends AbstractMessage {
 
         /*
          * A NetworkMessage contains just a string. 
          */
-        private String message = "";
+        private String nickname = "";
 
         /*
          * Every message class must have a parameterless constructor.
@@ -56,16 +61,8 @@ public class GameMessage {
         /*
          * In addition, the class can have any number of other constructors.
          */
-        public ConnectMessage(String message) {
-            this.message = message;
-        }
-
-        /*
-         * For each piece of data stored in the message, we add a method 
-         * that returns the data.
-         */
-        public String getMessage() {
-            return message;
+        public ConnectMessage(String n) {
+            this.nickname = n;
         }
     }
     
@@ -75,91 +72,35 @@ public class GameMessage {
         /*
          * A NetworkMessage contains just a string. 
          */
-        private String message = "";
 
         /*
          * Every message class must have a parameterless constructor.
          */
         public DisconnectMessage() {
         }
-
-        /*
-         * In addition, the class can have any number of other constructors.
-         */
-        public DisconnectMessage(String message) {
-            this.message = message;
-        }
-
-        /*
-         * For each piece of data stored in the message, we add a method 
-         * that returns the data.
-         */
-        public String getMessage() {
-            return message;
-        }
     }
     
     @Serializable
     public static class AliveMessage extends AbstractMessage {
 
-        /*
-         * A NetworkMessage contains just a string. 
-         */
-        private String message = "";
 
         /*
          * Every message class must have a parameterless constructor.
          */
         public AliveMessage() {
         }
-
-        /*
-         * In addition, the class can have any number of other constructors.
-         */
-        public AliveMessage(String message) {
-            this.message = message;
-        }
-
-        /*
-         * For each piece of data stored in the message, we add a method 
-         * that returns the data.
-         */
-        public String getMessage() {
-            return message;
-        }
     }
     
-    /*
-     * Game message
-     */
+    // --------------
+    // Game messages
+    // --------------
     @Serializable
     public static class LaserInputMessage extends AbstractMessage {
 
-        /*
-         * A NetworkMessage contains just a string. 
-         */
-        private String message = "";
-
-        /*
-         * Every message class must have a parameterless constructor.
-         */
+        
         public LaserInputMessage() {
         }
 
-        /*
-         * In addition, the class can have any number of other constructors.
-         */
-        public LaserInputMessage(String message) {
-            this.message = message;
-        }
-
-        /*
-         * For each piece of data stored in the message, we add a method 
-         * that returns the data.
-         */
-        public String getMessage() {
-            return message;
-        }
     }
     @Serializable
     public static class RotateInputMessage extends AbstractMessage {
@@ -167,7 +108,8 @@ public class GameMessage {
         /*
          * A NetworkMessage contains just a string. 
          */
-        private String message = "";
+        private boolean r = true;
+        private float a = -1f;
 
         /*
          * Every message class must have a parameterless constructor.
@@ -178,45 +120,176 @@ public class GameMessage {
         /*
          * In addition, the class can have any number of other constructors.
          */
-        public RotateInputMessage(String message) {
-            this.message = message;
+        public RotateInputMessage(boolean r, float a) {
+            this.r=r;
+            this.a=a;
         }
 
-        /*
-         * For each piece of data stored in the message, we add a method 
-         * that returns the data.
-         */
-        public String getMessage() {
-            return message;
-        }
     }
+    
     @Serializable
     public static class FireInputMessage extends AbstractMessage {
-
-        /*
-         * A NetworkMessage contains just a string. 
-         */
-        private String message = "";
-
-        /*
-         * Every message class must have a parameterless constructor.
-         */
         public FireInputMessage() {
         }
-
-        /*
-         * In addition, the class can have any number of other constructors.
-         */
-        public FireInputMessage(String message) {
-            this.message = message;
+    }
+    
+    // =======================================================================
+    // SERVER -> CLIENT
+    // =======================================================================
+    // ----------
+    // Infrastructure
+    // ----------
+    
+    @Serializable
+    public static class NewClientAcceptedMessage extends AbstractMessage {   
+        
+        private String nickname = "";
+        private int id = -1;
+        
+        public NewClientAcceptedMessage() {
         }
-
-        /*
-         * For each piece of data stored in the message, we add a method 
-         * that returns the data.
-         */
-        public String getMessage() {
-            return message;
+        
+        public NewClientAcceptedMessage(String n, int id) {
+            this.nickname=n;
+            this.id=id;
+        }
+    }
+    
+    @Serializable
+    public static class RejectMessage extends AbstractMessage {
+        private int e = -1;
+        public RejectMessage() {
+        }
+        public RejectMessage(int e) {
+            this.e = e;
+        }
+    }
+    
+    @Serializable
+    public static class DisconnectedMessage extends AbstractMessage {
+        private int c = -1;
+        public DisconnectedMessage() {
+        }
+        public DisconnectedMessage(int c) {
+            this.c=c;
+        }
+    }
+    
+    @Serializable
+    public static class PrepareMessage extends AbstractMessage {
+        
+        private Vector3f[] pa;
+        private String[] na;
+        private float [] ra;
+        private boolean[] la;
+        
+        public PrepareMessage() {
+        }
+    }
+    
+    @Serializable
+    public static class StartMessage extends AbstractMessage {
+        public StartMessage() {
+        }
+    }
+    
+    // -----------
+    // Concerning game
+    // -----------
+    @Serializable
+    public static class ActivateMessage extends AbstractMessage {
+        
+        private int id = -1;
+        private int index = -1;
+        private Vector3f pos;
+        private Quaternion rot;
+        
+        public ActivateMessage() {
+        }
+        public ActivateMessage(int id, int index, Vector3f pos, Quaternion rot) {
+            this.id = id;
+            this.index = index;
+            this.pos = pos;
+            this.rot = rot;
+        }
+    }
+    
+    public static class InactiveMessage extends AbstractMessage {
+        private int id = -1;
+        private int index = -1;
+        public InactiveMessage() {
+        }
+        public InactiveMessage(int id, int index) {
+            this.id = id;
+            this.index=index;
+        }
+    }
+    
+    public static class MoveMessage extends AbstractMessage {
+        private int index = -1;
+        private Vector3f pos;
+        public MoveMessage() {
+        }
+        public MoveMessage(int index, Vector3f p) {
+            this.index=index;
+            this.pos = p;
+        }
+    }
+    
+    public static class ChangeMessage extends AbstractMessage {
+        private int id = -1;
+        private int index = -1;
+        private Vector3f pos;
+        private Quaternion rot;
+        public ChangeMessage() {
+        }
+        public ChangeMessage(int id, int index, Vector3f pos, Quaternion rot) {
+            this.id = id;
+            this.index = index;
+            this.pos = pos;
+            this.rot = rot;
+        }
+    }
+    
+    public static class AwardMessage extends AbstractMessage {
+        private int id = -1;
+        private int points = 0;
+        public AwardMessage() {
+        }
+        public AwardMessage(int id, int points) {
+            this.id=id;
+            this.points=points;
+        }
+    }
+    
+    public static class RotateMessage extends AbstractMessage {
+        private int id = -1;
+        private Quaternion rot;
+        public RotateMessage() {
+        }
+        public RotateMessage(int id, Quaternion rot) {
+            this.id = id;
+            this.rot = rot;
+        }
+    }
+    
+    public static class LaserToggledMessage extends AbstractMessage {
+        private int id = -1;
+        private boolean b = false;
+        public LaserToggledMessage() {
+        }
+        public LaserToggledMessage(int id, boolean b) {
+            this.id=id;
+            this.b=b;
+        }
+    }
+    
+    public static class CongratulateMessage extends AbstractMessage {
+        private int[] winners;
+        public CongratulateMessage() {
+        }
+        public CongratulateMessage(int[] winners) {
+            this.winners=winners;
         }
     }
 }

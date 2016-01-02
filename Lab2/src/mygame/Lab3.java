@@ -29,6 +29,8 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.Random;
 
+import mygame.GameMessage.*;
+
 import static mygame.Constants.*;
 
 /*

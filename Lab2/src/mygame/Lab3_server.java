@@ -29,18 +29,27 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.Random;
 
-//Contains the game constants.
 import static mygame.Constants.*;
+import mygame.GameMessage;
 
+/*
+ * TODO:
+ * 
+ * - Extract code making cannon into own function.
+ * - Remove all function from client that belongs in server.
+ * - Fix network functionality.
+ */
 
 /** Sample 2 - How to use nodes as handles to manipulate objects in the scene.
  * You can rotate, translate, and scale objects by manipulating their parent nodes.
  * The Root Node is special: Only what is attached to the Root Node appears in the scene. */
 public class Lab3_server extends SimpleApplication{
-    
+   
     private boolean verbose = true;
     private boolean run = true;
+    //This is the nickname of this client
     private String nick;
+    //The server address. Usually in the form of an IP.
     private String address;
     
     public Lab3_server(String nick, String address){
@@ -59,9 +68,7 @@ public class Lab3_server extends SimpleApplication{
     protected BitmapText hudText;
     protected AudioNode cannonAudioNode;
     
-    //Solve this by putting a the basenode into a second node.
     //Distance needed turns out to be ~25.5 if maximally packed.
-    protected Quaternion resetBase;
     
     protected boolean laser_on = false;
     protected int active_cannonballs = 0;
@@ -131,9 +138,6 @@ public class Lab3_server extends SimpleApplication{
         allProjectiles.setLocalTranslation(0,
                 CANNON_BASE_HEIGHT*0.5f+CANNON_BARREL_RADIUS,
                 PLAYINGFIELD_RADIUS);
-        
-        resetBase = baseNode.getLocalRotation();
-
     }
 
     private void initShapes() {
@@ -397,7 +401,6 @@ public class Lab3_server extends SimpleApplication{
                 tracePrint("Whoops! Can quota filled.","POPULATE");
                 break; //Should all else fail, break if we have all the cans we need.
             }
-            
             playingFieldNode.attachChild(can);
             can.rotate(random_rotation);
             moveForwardZ(can,distance);
@@ -591,8 +594,8 @@ public class Lab3_server extends SimpleApplication{
                     
                     if (can.getName().equals("Can")){
                         if (checkForXZCollision(cannonball, can)) {
-                            //cannonball.removeFromParent();
-                            doCollisionCannonballs((Node)cannonball, (Node)can);
+                            cannonball.removeFromParent();
+                            //doCollisionCannonballs((Node)cannonball, (Node)can);
                             int points = can.getUserData("Value");
                             if (run) {
                                 userScore += points;
